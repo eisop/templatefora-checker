@@ -15,11 +15,9 @@ configurations {
 }
 
 ext.versions = [
-    checkerFramework: "3.48.2",
+        eisopVersion: '3.42.0-eisop4',
 ]
 
-
-sourceCompatibility = 1.8
 def checkerframework_local = false  // Set this variable to [true] while using local version of checker framework.
 
 dependencies {
@@ -29,15 +27,15 @@ dependencies {
         implementation files('${CHECKERFRAMEWORK}/checker/dist/checker.jar')
     }
     else {
-        implementation "org.checkerframework:checker:${versions.checkerFramework}"
-        implementation "org.checkerframework:checker-qual:${versions.checkerFramework}"
+        implementation "io.github.eisop:checker:${versions.eisopVersion}"
+        implementation "io.github.eisop:checker-qual:${versions.eisopVersion}"
     }
 
     compileOnly "com.google.errorprone:javac:9+181-r4173-1"
 
     // Testing
     testImplementation 'junit:junit:4.13.2'
-    testImplementation "org.checkerframework:framework-test:${versions.checkerFramework}"
+    testImplementation "io.github.eisop:framework-test:${versions.eisopVersion}"
 
     errorproneJavac "com.google.errorprone:javac:9+181-r4173-1"
 }
@@ -51,7 +49,7 @@ tasks.withType(JavaCompile).all {
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = 'org.checkerframework'
+            groupId = 'io.github.eisop'
             artifactId = 'templatefora-checker'
             version = '0.1-SNAPSHOT'
 
