@@ -18,8 +18,6 @@ ext.versions = [
     checkerFramework: "3.48.2",
 ]
 
-
-sourceCompatibility = 1.8
 def checkerframework_local = false  // Set this variable to [true] while using local version of checker framework.
 
 dependencies {
@@ -43,6 +41,7 @@ dependencies {
 }
 
 tasks.withType(JavaCompile).all {
+    sourceCompatibility = 1.8
     options.compilerArgs.add("-Xlint:all")
 }
 
@@ -87,7 +86,7 @@ test {
     testLogging {
         showStandardStreams = true
         // Show the found unexpected diagnostics and expected diagnostics not found.
-        exceptionFormat "full"
+        exceptionFormat = "full"
         events "failed"
     }
 }
@@ -97,7 +96,7 @@ clean.doFirst {
 }
 
 task printClasspath {
-    description 'Prints the runtime classpath of the checker. ' +
+    description = 'Prints the runtime classpath of the checker. ' +
             'When typechecking, put the output of this task on either the ' +
             'processor path or the classpath of the project being type-checed.'
     doLast {
