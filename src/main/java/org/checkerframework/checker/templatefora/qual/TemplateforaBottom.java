@@ -15,5 +15,4 @@ import org.checkerframework.framework.qual.TypeUseLocation;
 @SubtypeOf({TemplateforaUnknown.class})
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE_USE, ElementType.TYPE_PARAMETER})
-@TargetLocations({TypeUseLocation.EXPLICIT_LOWER_BOUND, TypeUseLocation.EXPLICIT_UPPER_BOUND})
 public @interface TemplateforaBottom {}

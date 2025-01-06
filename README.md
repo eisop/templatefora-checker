@@ -102,7 +102,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    annotationProcessor 'org.checkerframework:templatefora-checker:0.1-SNAPSHOT'
+    annotationProcessor 'io.github.eisop:templatefora-checker:0.1-SNAPSHOT'
 }
 ```
 
