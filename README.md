@@ -47,9 +47,9 @@ for file in $(find . -name '*templatefora*'); do mv $file ${file/templatefora/ch
 4. Change the groupId of the `publishing` block in the `build.gradle` file
   to an organization you belong to that can publish to Maven
   Central. Change the name of the package containing the source (currently
-  `.checker.templatefora`) so that it reflects your
+  `org.checkerframework.checker.templatefora`) so that it reflects your
   organization's naming standards. Replace all instances of
-  `io.github.eisop.checker.templatefora` and
+  `org.checkerframework.checker.templatefora` and
   `org/checkerframework/checker/templatefora` with whatever name you have chosen.
   These commands make the changes within files but do not rename directories:
 
