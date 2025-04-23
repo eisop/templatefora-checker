@@ -31,13 +31,13 @@ dependencies {
         implementation "io.github.eisop:checker-qual:${versions.eisopVersion}"
     }
 
-    compileOnly "com.google.errorprone:javac:9+181-r4173-1"
+    compileOnly "com.google.errorprone:javac:1+"
 
     // Testing
     testImplementation 'junit:junit:4.13.2'
     testImplementation "io.github.eisop:framework-test:${versions.eisopVersion}"
 
-    errorproneJavac "com.google.errorprone:javac:9+181-r4173-1"
+    errorproneJavac "com.google.errorprone:javac:1+"
 }
 
 tasks.withType(JavaCompile).all {
