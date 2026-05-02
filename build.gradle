@@ -15,7 +15,7 @@ configurations {
 }
 
 ext.versions = [
-        eisopVersion: '3.49.1-eisop1',
+        eisopVersion: '3.49.3-eisop1',
 ]
 
 def checkerframework_local = false  // Set this variable to [true] while using local version of checker framework.
