@@ -18,6 +18,19 @@ ext.versions = [
         eisopVersion: '3.49.5-eisop1',
 ]
 
+// The JDK to compile and test against. Defaults to whatever JDK is running Gradle itself.
+// Override with -PuseJdkVersion=<N> (or the ORG_GRADLE_PROJECT_useJdkVersion environment
+// variable CI sets) to target a JDK different from the one running Gradle -- needed because
+// Gradle 9 requires JDK 17+ to run at all, independent of which JDK this project's own code
+// should be compiled and tested against. Mirrors checker-framework's own root build.gradle and
+// .github/workflows/ci.yml, which use the same property name for the same reason.
+def currentRuntimeJavaVersion = JavaVersion.current().majorVersion as int
+def useJdkVersionProp = findProperty('useJdkVersion')
+def useJdkVersionInt = useJdkVersionProp == null ? currentRuntimeJavaVersion : (useJdkVersionProp as int)
+// Toolchains have overhead (Gradle must locate or download a matching JDK), so only ask for one
+// when actually targeting a JDK other than the one already running Gradle.
+def useToolchain = (useJdkVersionInt != currentRuntimeJavaVersion)
+
 def checkerframework_local = false  // Set this variable to [true] while using local version of checker framework.
 
 dependencies {
@@ -43,6 +56,19 @@ dependencies {
 tasks.withType(JavaCompile).all {
     sourceCompatibility = 1.8
     options.compilerArgs.add("-Xlint:all")
+    if (useToolchain) {
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(useJdkVersionInt)
+        }
+    }
+}
+
+javadoc {
+    if (useToolchain) {
+        javadocTool = javaToolchains.javadocToolFor {
+            languageVersion = JavaLanguageVersion.of(useJdkVersionInt)
+        }
+    }
 }
 
 // Add `mavenLocal()` in `repositories`, then run `./gradlew publishToMavenLocal`
@@ -61,7 +87,15 @@ publishing {
 
 test {
     inputs.files("tests/templatefora")
-    if (!JavaVersion.current().java9Compatible) {
+    if (useToolchain) {
+        javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(useJdkVersionInt)
+        }
+    }
+    // Checked against the JDK this task actually runs the tests under (useJdkVersionInt), not
+    // JavaVersion.current() (the JDK running Gradle itself, which the toolchain above may have
+    // just overridden for this task).
+    if (useJdkVersionInt < 9) {
         jvmArgs "-Xbootclasspath/p:${configurations.errorproneJavac.asPath}"
     } else {
         // A list of add-export and add-open arguments to be used when running the Checker Framework.

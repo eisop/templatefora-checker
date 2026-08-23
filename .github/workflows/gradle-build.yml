@@ -2,6 +2,12 @@ name: Java CI with Gradle
 
 on: [push, pull_request]
 
+env:
+  # The JDK that runs Gradle itself: Gradle 9 requires 17+, independent of which JDK the
+  # matrix below targets for compiling and testing this project's own code. Mirrors
+  # checker-framework's own ci.yml, whose PRIMARY_JDK this matches.
+  PRIMARY_JDK: '21'
+
 jobs:
   build:
 
@@ -16,10 +22,27 @@ jobs:
       with:
         fetch-depth: 1
         show-progress: false
-    - name: Set up JDK
+    - name: Set up JDK ${{ env.PRIMARY_JDK }} for Gradle to run on
       uses: actions/setup-java@v5
       with:
         distribution: 'temurin'
+        # Install this first, so it is available to Gradle via gradle.properties below.
+        java-version: ${{ env.PRIMARY_JDK }}
+    - name: Set up JDK ${{ matrix.java }} to compile and test against
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        # Install this second, so it becomes the default JAVA_HOME; the toolchain block in
+        # build.gradle then targets it explicitly for compileJava/test regardless of default.
         java-version: ${{ matrix.java }}
+    - name: Pin Gradle to JDK ${{ env.PRIMARY_JDK }} via gradle.properties
+      run: |
+        mkdir -p ~/.gradle
+        echo "org.gradle.java.home=$JAVA_HOME_${{ env.PRIMARY_JDK }}_X64" >> ~/.gradle/gradle.properties
     - name: ./gradlew build javadoc
       run: ./gradlew build javadoc
+      env:
+        # Tells build.gradle's toolchain block which JDK to compile/test against, so this
+        # matrix entry still exercises JDK ${{ matrix.java }} even though Gradle itself always
+        # runs on JDK ${{ env.PRIMARY_JDK }}.
+        ORG_GRADLE_PROJECT_useJdkVersion: ${{ matrix.java }}
