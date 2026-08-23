@@ -32,14 +32,19 @@ def useJdkVersionInt = useJdkVersionProp == null ? currentRuntimeJavaVersion : (
 def useToolchain = (useJdkVersionInt != currentRuntimeJavaVersion)
 
 // Set this variable to [true] while using a local checkout of the Checker Framework, pointed to
-// by the CHECKERFRAMEWORK environment variable. Currently true because the binary (pre-parsed)
-// stub file support that generateBinaryStubFiles (below) exercises has not shipped in a released
-// eisop version yet; set this back to [false] once versions.eisopVersion names a release that
-// includes it. An "ext" property (not a local "def"), so example-client/build.gradle -- which
-// needs its own, separate Checker Framework dependency, since project(':')'s own dependency on
-// it is "implementation" and so not transitively visible to a project that depends on
-// project(':') -- can read the same flag instead of duplicating it.
-ext.checkerframework_local = true
+// by the CHECKERFRAMEWORK environment variable. Left [false] here (this repository's default,
+// and what both this project's own CI and checker-framework's own :checker:templateforaCheckerTests
+// CI job -- which clones this repository fresh and builds it -- run against, neither of which sets
+// CHECKERFRAMEWORK) even though the binary (pre-parsed) stub file support that
+// generateBinaryStubFiles (below) and example-client exercise has not shipped in a released eisop
+// version yet: set this to [true] locally to exercise that work before it ships, but do not commit
+// it that way, since CI would then fail everywhere for lacking that environment variable. Revisit
+// once versions.eisopVersion names a release that includes it. An "ext" property (not a local
+// "def"), so example-client/build.gradle -- which needs its own, separate Checker Framework
+// dependency, since project(':')'s own dependency on it is "implementation" and so not
+// transitively visible to a project that depends on project(':') -- can read the same flag instead
+// of duplicating it.
+ext.checkerframework_local = false
 
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
