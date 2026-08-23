@@ -31,13 +31,18 @@ def useJdkVersionInt = useJdkVersionProp == null ? currentRuntimeJavaVersion : (
 // when actually targeting a JDK other than the one already running Gradle.
 def useToolchain = (useJdkVersionInt != currentRuntimeJavaVersion)
 
-def checkerframework_local = false  // Set this variable to [true] while using local version of checker framework.
+// Set this variable to [true] while using a local checkout of the Checker Framework, pointed to
+// by the CHECKERFRAMEWORK environment variable. Currently true because the binary (pre-parsed)
+// stub file support that generateBinaryStubFiles (below) exercises has not shipped in a released
+// eisop version yet; set this back to [false] once versions.eisopVersion names a release that
+// includes it.
+def checkerframework_local = true
 
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     if (checkerframework_local) {
-        implementation files('${CHECKERFRAMEWORK}/checker/dist/checker-qual.jar')
-        implementation files('${CHECKERFRAMEWORK}/checker/dist/checker.jar')
+        implementation files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker-qual.jar")
+        implementation files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker.jar")
     }
     else {
         implementation "io.github.eisop:checker:${versions.eisopVersion}"
@@ -147,3 +152,38 @@ sourceSets {
         }
     }
 }
+
+// Pre-parses every .astub file under src/main/java (e.g. jdk.astub) into a sibling
+// <name>.astub.bin.gz, which the Checker Framework reads instead of text-parsing the .astub
+// file, as long as the sibling is up to date; see org.checkerframework.framework.stubifier
+// .BinaryStubFileGenerator's javadoc, and the Checker Framework manual's "Using a binary
+// (pre-parsed) stub file" section, for how staleness is detected and reported.
+//
+// Writes into a build/ staging directory rather than beside the .astub source, because
+// src/main/java also holds hand-written source: an output declared there would let Gradle
+// believe it owns everything under src/main/java, including that source, and delete files it
+// does not recognize as this task's own output on a stale-output cleanup. The staging directory
+// is then added as an extra resources srcDir below, so the generated sibling is packaged into
+// the distributed jar right beside jdk.astub itself -- this is not test-only output.
+def binaryStubFilesDir = layout.buildDirectory.dir('generated/binaryStubFiles')
+tasks.register('generateBinaryStubFiles', JavaExec) {
+    group = 'Build'
+    description = 'Pre-parse the .astub files under src/main/java into the binary stub format.'
+    // Not sourceSets.main.runtimeClasspath: that includes sourceSets.main.output, which is
+    // itself produced by processResources -- and processResources depends on this task (below),
+    // so runtimeClasspath here would create a dependency cycle. classesDirs (compileJava's
+    // output) is enough: jdk.astub refers to this project's own
+    // org.checkerframework.checker.templatefora.qual annotations (TemplateforaBottom), and
+    // BinaryStubFileGenerator loads every annotation type a stub file uses, reflectively, to
+    // read its @Target -- so those compiled classes must be on the classpath, but nothing from
+    // processResources's own output is needed.
+    classpath = sourceSets.main.output.classesDirs + sourceSets.main.compileClasspath
+    mainClass = 'org.checkerframework.framework.stubifier.BinaryStubFileGenerator'
+    inputs.files(fileTree('src/main/java') { include '**/*.astub' })
+    outputs.dir(binaryStubFilesDir)
+    args(binaryStubFilesDir.get().asFile.absolutePath, file('src/main/java').absolutePath)
+}
+sourceSets.main.resources.srcDir(binaryStubFilesDir)
+// srcDir() alone does not make processResources depend on generateBinaryStubFiles -- it must be
+// declared explicitly, or a fresh checkout can package a stale (or missing) binary sibling.
+tasks.named('processResources').configure { dependsOn 'generateBinaryStubFiles' }
