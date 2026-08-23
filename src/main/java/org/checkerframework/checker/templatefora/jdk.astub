@@ -1,0 +1,26 @@
+// A small example stub file for the TemplateForA Checker, showing how to give JDK methods a
+// contract via a built-in stub file (loaded automatically because it is named "jdk.astub" and
+// sits beside TemplateforaChecker.java -- see AnnotationFileElementTypes#parseStubFiles in the
+// Checker Framework for that convention). None of these are real contracts for java.lang.Math or
+// java.lang.System -- @TemplateforaBottom just means "treat this value as definitely TODO",
+// which is whatever your real qualifier ends up meaning once you fill in the TODOs in
+// org/checkerframework/checker/templatefora/qual/.
+//
+// See ../../../../../../build.gradle's generateBinaryStubFiles task: it pre-parses this file
+// into a sibling jdk.astub.bin.gz, which is packaged into the distributed jar alongside it and
+// read instead of text-parsing this file, as long as the sibling is up to date.
+
+package java.lang;
+
+import org.checkerframework.checker.templatefora.qual.TemplateforaBottom;
+
+class Math {
+  // A number chosen by fair dice roll is, by definition, TemplateforaBottom.
+  // https://xkcd.com/221/
+  public static @TemplateforaBottom double random();
+}
+
+class System {
+  // The current time is always exactly now: a tautology, so definitely TemplateforaBottom.
+  public static @TemplateforaBottom long currentTimeMillis();
+}
