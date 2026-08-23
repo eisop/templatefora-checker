@@ -110,6 +110,52 @@ Now, when you build your project, the TemplateForA Checker will also run,
 informing you of any potential errors related to TODO.
 
 
+## Giving JDK and library methods a contract
+
+Your own code's contracts come from the `@TemplateforaBottom`/`@TemplateforaUnknown`
+qualifiers you write directly on it (see "How to specify your code" below). A method in the
+JDK or another library, whose source you cannot annotate, instead gets its contract from a
+*stub file* -- see the Checker Framework manual's
+[Stub files](https://eisop.github.io/cf/manual/#stub) section for the full format. There are
+two ways to supply one, both demonstrated in this repository:
+
+- **The checker's own built-in stub.**
+  [`src/main/java/org/checkerframework/checker/templatefora/jdk.astub`](src/main/java/org/checkerframework/checker/templatefora/jdk.astub)
+  ships with this checker and applies automatically for every downstream project -- no
+  configuration needed on their end. It is loaded by filename convention (a file named exactly
+  `jdk.astub`, sitting beside `TemplateforaChecker.java`); add more built-in stub files with a
+  `@StubFiles` annotation on `TemplateforaChecker` (see the manual's [Using a stub
+  file](https://eisop.github.io/cf/manual/#stub-using) section).
+- **A checker user's own `-Astubs` file.** Anyone using this checker on their own project can
+  add contracts of their own, for methods this checker's built-in stub does not cover, by
+  passing `-Astubs=<path>` pointing at their own stub file or directory.
+  [`example-client/`](example-client/) is a small, self-contained example of exactly that: a
+  project that depends on `templatefora-checker` (the same way the "How to run the checker"
+  section above describes) and supplies
+  [`example-client/stubs/jdk-extra.astub`](example-client/stubs/jdk-extra.astub) for a JDK
+  method the checker's own built-in stub does not annotate. Run
+  `./gradlew :example-client:build` to see it type-check successfully because of that stub.
+
+Either kind of stub file can be pre-parsed into a faster binary form ahead of time, instead of
+being parsed as text on every compilation that uses it -- this template does so automatically:
+
+- [`build.gradle`](build.gradle)'s `generateBinaryStubFiles` task pre-parses the checker's own
+  `jdk.astub`, and packages the result into the built jar right alongside the text file, so
+  every downstream consumer gets the faster form, not just this repository's own tests.
+- [`example-client/build.gradle`](example-client/build.gradle)'s task of the same name does the
+  same for that project's own `stubs/jdk-extra.astub`, in place beside it -- a user-supplied
+  `-Astubs` file is never packaged into any jar, so there is nothing to add to
+  `example-client`'s own build output.
+
+If a stub file's binary form no longer matches its current text (for example, someone edited
+the `.astub` file without re-running the build), the Checker Framework falls back to
+text-parsing it and warns; it never silently applies a stale contract. This binary-stub-file
+support, including for a `-Astubs` file specifically, is recent Checker Framework work that has
+not shipped in a released eisop version as of this writing: see `checkerframework_local` in
+[`build.gradle`](build.gradle) and [`example-client/build.gradle`](example-client/build.gradle)
+for how to point this repository at a local, unreleased checkout in the meantime.
+
+
 ## How to specify your code
 
 At compile time, the TemplateForAChecker estimates what values the program
@@ -139,7 +185,9 @@ The value is definitely TODO. It is safe to use for TODO.
 
 Run these commands from the top-level directory.
 
-`./gradlew build`: build the checker
+`./gradlew build`: build the checker. This also builds and type-checks `example-client`
+(see "Giving JDK and library methods a contract" above), since it is a subproject of this
+same Gradle build, not a separate repository.
 
 `./gradlew publishToMavenLocal`: publish the checker to your local Maven repository.
 This is useful for testing before you publish it elsewhere, such as to Maven Central.
