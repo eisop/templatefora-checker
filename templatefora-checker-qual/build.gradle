@@ -7,8 +7,8 @@ repositories {
 }
 
 dependencies {
-    implementation "io.github.eisop:checker:${versions.eisopVersion}"
-    implementation "io.github.eisop:checker-qual:${versions.eisopVersion}"
+    implementation "io.github.eisop:checker:${rootProject.versions.eisopVersion}"
+    implementation "io.github.eisop:checker-qual:${rootProject.versions.eisopVersion}"
 }
 
 task copySources(type: Copy) {
