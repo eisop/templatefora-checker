@@ -30,19 +30,24 @@ dependencies {
     // -qual on implementation/compileOnly, checker (full) on annotationProcessor, kept separate.
     // project(':')'s own dependency on both is "implementation", so neither is transitively
     // visible here; declare them again, the same way project(':')'s own build.gradle does.
-    if (checkerframework_local) {
+    if (rootProject.checkerframework_local) {
         compileOnly files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker-qual.jar")
         annotationProcessor files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker-qual.jar")
         annotationProcessor files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker.jar")
     } else {
-        compileOnly "io.github.eisop:checker-qual:${versions.eisopVersion}"
-        annotationProcessor "io.github.eisop:checker:${versions.eisopVersion}"
-        annotationProcessor "io.github.eisop:checker-qual:${versions.eisopVersion}"
+        compileOnly "io.github.eisop:checker-qual:${rootProject.versions.eisopVersion}"
+        annotationProcessor "io.github.eisop:checker:${rootProject.versions.eisopVersion}"
+        annotationProcessor "io.github.eisop:checker-qual:${rootProject.versions.eisopVersion}"
     }
 }
 
 tasks.withType(JavaCompile).all {
     sourceCompatibility = 1.8
+    if (rootProject.useToolchain) {
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(rootProject.useJdkVersionInt)
+        }
+    }
 }
 
 // Pre-parses the .astub files under stubs/ into a sibling <name>.astub.bin.gz each, which
@@ -86,7 +91,10 @@ compileJava {
             '-processor', 'org.checkerframework.checker.templatefora.TemplateforaChecker',
             "-Astubs=${stubsDir.absolutePath}".toString(),
     ])
-    if (JavaVersion.current().java9Compatible) {
+    // Checked against the JDK this task actually compiles under (rootProject.useJdkVersionInt),
+    // not JavaVersion.current() (the JDK running Gradle itself, which the toolchain above may
+    // have just overridden for this task).
+    if (rootProject.useJdkVersionInt >= 9) {
         // Required in Java 16+ because the Checker Framework reflectively accesses javac
         // internals; compileJava does not fork by default, so without options.fork = true these
         // arguments would need to apply to the Gradle daemon's own JVM instead, which this
