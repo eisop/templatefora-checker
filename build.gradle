@@ -35,8 +35,11 @@ def useToolchain = (useJdkVersionInt != currentRuntimeJavaVersion)
 // by the CHECKERFRAMEWORK environment variable. Currently true because the binary (pre-parsed)
 // stub file support that generateBinaryStubFiles (below) exercises has not shipped in a released
 // eisop version yet; set this back to [false] once versions.eisopVersion names a release that
-// includes it.
-def checkerframework_local = true
+// includes it. An "ext" property (not a local "def"), so example-client/build.gradle -- which
+// needs its own, separate Checker Framework dependency, since project(':')'s own dependency on
+// it is "implementation" and so not transitively visible to a project that depends on
+// project(':') -- can read the same flag instead of duplicating it.
+ext.checkerframework_local = true
 
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.

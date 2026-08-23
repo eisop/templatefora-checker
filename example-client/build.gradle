@@ -1,0 +1,108 @@
+// This subproject is not part of the templatefora-checker artifact. It stands in for a
+// downstream project that USES templatefora-checker (via the `annotationProcessor`
+// configuration below, exactly as README.md's "How to run the checker" section describes) and
+// supplies its OWN extra -Astubs stub file for a JDK method that templatefora-checker's built-in
+// stub (../src/main/java/org/checkerframework/checker/templatefora/jdk.astub) does not cover --
+// see stubs/jdk-extra.astub. Unlike that built-in stub, a -Astubs file is never packaged into
+// any jar: it is this project's own local file, read straight from stubs/ at compile time, so
+// its binary form is generated in place, beside its source, rather than into a resources
+// staging directory.
+
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // TemplateforaChecker itself, and its qualifier annotations (@TemplateforaBottom, used
+    // explicitly in this project's own source below).
+    compileOnly project(':')
+    annotationProcessor project(':')
+
+    // checker-qual must be on the compile classpath itself, not just the processor path: the
+    // checker resolves some of its own qualifiers (e.g. org.checkerframework.dataflow.qual
+    // .Deterministic) as symbols against the compilation, via javac's own Elements/Types, which
+    // consult -classpath -- not against the processor's own classloader, which -processorpath
+    // (below) governs. This mirrors the Checker Framework manual's own Gradle example: checker
+    // -qual on implementation/compileOnly, checker (full) on annotationProcessor, kept separate.
+    // project(':')'s own dependency on both is "implementation", so neither is transitively
+    // visible here; declare them again, the same way project(':')'s own build.gradle does.
+    if (checkerframework_local) {
+        compileOnly files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker-qual.jar")
+        annotationProcessor files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker-qual.jar")
+        annotationProcessor files("${System.getenv('CHECKERFRAMEWORK')}/checker/dist/checker.jar")
+    } else {
+        compileOnly "io.github.eisop:checker-qual:${versions.eisopVersion}"
+        annotationProcessor "io.github.eisop:checker:${versions.eisopVersion}"
+        annotationProcessor "io.github.eisop:checker-qual:${versions.eisopVersion}"
+    }
+}
+
+tasks.withType(JavaCompile).all {
+    sourceCompatibility = 1.8
+}
+
+// Pre-parses the .astub files under stubs/ into a sibling <name>.astub.bin.gz each, which
+// compileJava's -Astubs option (below) reads instead of text-parsing the .astub file, as
+// long as the sibling is up to date; see org.checkerframework.framework.stubifier
+// .BinaryStubFileGenerator's javadoc, and the Checker Framework manual's "Using a binary
+// (pre-parsed) stub file" section, for how staleness is detected and reported.
+//
+// Declares each expected <name>.astub.bin.gz explicitly as this task's output (rather than
+// outputs.dir("stubs")) because stubs/ also holds the hand-written .astub sources: an
+// outputs.dir() there would let Gradle believe it owns everything under stubs/, including those
+// sources, and delete files it does not recognize as this task's own output on a stale-output
+// cleanup.
+def stubsDir = file('stubs')
+def astubFiles = fileTree(stubsDir) { include '**/*.astub' }
+tasks.register('generateBinaryStubFiles', JavaExec) {
+    group = 'Build'
+    description = 'Pre-parse the .astub files under stubs/ into the binary stub format.'
+    // compileClasspath alone has TemplateforaBottom (via compileOnly project(':')) but not
+    // BinaryStubFileGenerator itself, which lives in checker.jar -- only on the
+    // annotationProcessor configuration here, not compileClasspath.
+    classpath = sourceSets.main.compileClasspath + configurations.annotationProcessor
+    mainClass = 'org.checkerframework.framework.stubifier.BinaryStubFileGenerator'
+    inputs.files(astubFiles).withPropertyName('astubFiles')
+    outputs.files(astubFiles.collect { file("${it}.bin.gz") }).withPropertyName('binaryStubFiles')
+    args(stubsDir.absolutePath, stubsDir.absolutePath)
+}
+
+compileJava {
+    dependsOn 'generateBinaryStubFiles'
+    // -Astubs is a plain compilerArgs string, so Gradle has no way to know stubs/ content
+    // affects this task's output unless told explicitly -- without this, editing
+    // jdk-extra.astub would leave compileJava UP-TO-DATE on its stale, previously compiled
+    // output instead of rerunning (verified: removing the stub's only entry while leaving this
+    // line out still reported UP-TO-DATE, silently keeping the old, now-incorrect result).
+    inputs.dir(stubsDir)
+    // An absolute path, not "-Astubs=stubs/": options.fork (below) runs javac in a separate
+    // worker process whose working directory is Gradle's own, not this project's, so a relative
+    // path would not resolve where expected.
+    options.compilerArgs.addAll([
+            '-processor', 'org.checkerframework.checker.templatefora.TemplateforaChecker',
+            "-Astubs=${stubsDir.absolutePath}".toString(),
+    ])
+    if (JavaVersion.current().java9Compatible) {
+        // Required in Java 16+ because the Checker Framework reflectively accesses javac
+        // internals; compileJava does not fork by default, so without options.fork = true these
+        // arguments would need to apply to the Gradle daemon's own JVM instead, which this
+        // project cannot control. Keep this list in sync with the one in the root build.gradle's
+        // `test` task, and with the Checker Framework manual's own copy.
+        options.fork = true
+        options.forkOptions.jvmArgs.addAll([
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED',
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED',
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED',
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+                '--add-exports', 'jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED',
+                '--add-opens', 'jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED',
+        ])
+    }
+}

@@ -1,0 +1,20 @@
+// This project's OWN -Astubs stub file, separate from templatefora-checker's built-in
+// ../../src/main/java/org/checkerframework/checker/templatefora/jdk.astub: it covers a JDK
+// method the checker's built-in stub does not (java.util.Random.nextInt()), the way a
+// downstream project adds contracts for a library it uses but the checker author did not
+// anticipate. As with jdk.astub, @TemplateforaBottom here does not mean anything real -- it is
+// whatever your real qualifier ends up meaning once you fill in the TODOs in
+// org/checkerframework/checker/templatefora/qual/.
+//
+// See ../build.gradle's generateBinaryStubFiles task: it pre-parses this file into a sibling
+// jdk-extra.astub.bin.gz, which -Astubs=stubs/ reads instead of text-parsing this file, as long
+// as the sibling is up to date.
+
+package java.util;
+
+import org.checkerframework.checker.templatefora.qual.TemplateforaBottom;
+
+class Random {
+  // Every number this project draws is, for its purposes, definitely TODO.
+  public @TemplateforaBottom int nextInt();
+}
