@@ -3,7 +3,21 @@ plugins {
     id 'maven-publish'
 }
 
+// The Checker Framework version to build against. Override with "-PcfVersion=<version>" to use
+// a locally-built Checker Framework: publish that checkout with "./gradlew publishToMavenLocal"
+// and pass the version it reports.
+def cfVersion = findProperty('cfVersion')
+
 repositories {
+    // Only consulted when -PcfVersion names a locally published build, and scoped to
+    // io.github.eisop so nothing else can be served from a developer's local repository.
+    if (cfVersion) {
+        mavenLocal {
+            content {
+                includeGroup 'io.github.eisop'
+            }
+        }
+    }
     // Use Maven Central for resolving your dependencies.
     // You can declare any Maven/Ivy/file repository here.
     mavenCentral()
@@ -15,7 +29,7 @@ configurations {
 }
 
 ext.versions = [
-        eisopVersion: '3.49.5-eisop1',
+        eisopVersion: cfVersion ?: '3.49.5-eisop1',
 ]
 
 // The JDK to compile and test against. Defaults to whatever JDK is running Gradle itself.
@@ -31,18 +45,10 @@ def useJdkVersionInt = useJdkVersionProp == null ? currentRuntimeJavaVersion : (
 // when actually targeting a JDK other than the one already running Gradle.
 def useToolchain = (useJdkVersionInt != currentRuntimeJavaVersion)
 
-def checkerframework_local = false  // Set this variable to [true] while using local version of checker framework.
-
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
-    if (checkerframework_local) {
-        implementation files('${CHECKERFRAMEWORK}/checker/dist/checker-qual.jar')
-        implementation files('${CHECKERFRAMEWORK}/checker/dist/checker.jar')
-    }
-    else {
-        implementation "io.github.eisop:checker:${versions.eisopVersion}"
-        implementation "io.github.eisop:checker-qual:${versions.eisopVersion}"
-    }
+    implementation "io.github.eisop:checker:${versions.eisopVersion}"
+    implementation "io.github.eisop:checker-qual:${versions.eisopVersion}"
 
     compileOnly "com.google.errorprone:javac:9+181-r4173-1"
 
