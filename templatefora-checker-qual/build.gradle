@@ -3,6 +3,16 @@ plugins {
 }
 
 repositories {
+    // Matches the root project: only consulted when -PcfVersion names a locally published
+    // Checker Framework, and scoped to io.github.eisop. The version itself comes from
+    // rootProject.versions.eisopVersion, which honours -PcfVersion.
+    if (rootProject.findProperty('cfVersion')) {
+        mavenLocal {
+            content {
+                includeGroup 'io.github.eisop'
+            }
+        }
+    }
     mavenCentral()
 }
 
