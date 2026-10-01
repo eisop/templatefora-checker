@@ -1,6 +1,9 @@
 name: Java CI with Gradle
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ master ]
+  pull_request:
 
 env:
   # The JDK that runs Gradle itself: Gradle 9 requires 17+, independent of which JDK the
